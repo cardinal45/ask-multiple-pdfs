@@ -10,6 +10,35 @@ from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
 from langchain.llms import HuggingFaceHub
 
+
+######### Parallel version #########    
+from concurrent.futures import ThreadPoolExecutor
+
+def extract_text_from_pdf(pdf):
+    pdf_reader = PdfReader(pdf)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
+
+def get_pdf_text_parallel(pdf_docs):
+    with ThreadPoolExecutor() as executor:
+        texts = executor.map(extract_text_from_pdf, pdf_docs)
+    return "".join(texts)
+
+## embed text
+def get_embedding(text, embeddings):
+    return embeddings.embed(text)
+
+def get_vectorstore_parallel(text_chunks):
+    embeddings = OpenAIEmbeddings()
+    with ThreadPoolExecutor() as executor:
+        embeddings_list = list(executor.map(get_embedding, text_chunks, [embeddings]*len(text_chunks)))
+    vectorstore = FAISS.from_vectors(embeddings_list)
+    return vectorstore
+
+######### Sequential version #########
+
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
